@@ -11,9 +11,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/node-cron": "^3.0.1",
     "axios": "^0.26.1",
     "dotenv": "^16.0.0",
-    "node": "^17.7.2"
+    "node": "^17.7.2",
+    "node-cron": "^3.0.0",
+    "node-localstorage": "^2.2.1"
   },
   "devDependencies": {
     "@types/node": "^17.0.24",

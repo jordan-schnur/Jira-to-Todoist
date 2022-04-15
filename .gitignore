@@ -108,6 +108,7 @@ dist
 
 #Build artifacts
 build/
+storage/
 
 # To lazy to add to global ignore
 *.code-workspace
