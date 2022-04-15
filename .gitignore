@@ -102,3 +102,12 @@ dist
 
 # TernJS port file
 .tern-port
+
+#Environment Variables
+.env
+
+#Build artifacts
+build/
+
+# To lazy to add to global ignore
+*.code-workspace
