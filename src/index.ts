@@ -11,6 +11,7 @@ import JiraClient from './client/jira-client';
 import { TODOIST_COLOR } from './todoist-colors';
 import { getLogger } from './logging/LogConfig';
 import { TSMap } from 'typescript-map';
+import { createServer } from 'http';
 
 export const localStorage = new LocalStorage('./storage');
 export const ACTIVE_ISSUES_KEY = 'activeIssues';
@@ -226,3 +227,10 @@ cron.schedule('*/5 * * * *', () => {
 });
 
 searchIssuesPlease();
+
+createServer((req, res) => {
+    logger.info("Request received from client", {"request_id": req.url});
+    res.writeHead(200, {'Content-Type': 'text/plain'});
+    res.write('Hello World');
+    res.end();
+}).listen(process.env.PORT || 3000);
