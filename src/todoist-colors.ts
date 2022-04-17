@@ -1,22 +1,22 @@
-export const TODOIST_COLOR = [
-    30: { name: berry_red, color: "#b8256f" }
-    31: { name: red, color: "#db4035" }
-    32: { name: orange, color: "#ff9933" }
-    33: { name: yellow, color: "#fad000" }
-    34: { name: olive_green, color: "#afb83b" }
-    35: { name: lime_green, color: "#7ecc49" }
-    36: { name: green, color: "#299438" }
-    37: { name: mint_green, color: "#6accbc" }
-    38: { name: teal, color: "#158fad" }
-    39: { name: sky_blue, color: "#14aaf5" }
-    40: { name: light_blue, color: "#96c3eb" }
-    41: { name: blue, color: "#4073ff" }
-    42: { name: grape, color: "#884dff" }
-    43: { name: violet, color: "#af38eb" }
-    44: { name: lavender, color: "#eb96eb" }
-    45: { name: magenta, color: "#e05194" }
-    46: { name: salmon, color: "#ff8d85" }
-    47: { name: charcoal, color: "#808080" }
-    48: { name: grey, color: "#b8b8b8" }
-    49: { name: taupe, color: "#ccac93" }
-]
+export const TODOIST_COLOR = {
+    "berry_red": { id: 30, color: "#b8256f" },
+    "red": { id: 31, color: "#db4035" },
+    "orange": { id: 32, color: "#ff9933" },
+    "yellow": { id: 33, color: "#fad000" },
+    "olive_green": { id: 34, color: "#afb83b" },
+    "lime_green": { id: 35, color: "#7ecc49" },
+    "green": { id: 36, color: "#299438" },
+    "mint_green": { id: 37, color: "#6accbc" },
+    "teal": { id: 38, color: "#158fad" },
+    "sky_blue": { id: 39, color: "#14aaf5" },
+    "light_blue": { id: 40, color: "#96c3eb" },
+    "blue": { id: 41, color: "#4073ff" },
+    "grape": { id: 42, color: "#884dff" },
+    "violet": { id: 43, color: "#af38eb" },
+    "lavender": { id: 44, color: "#eb96eb" },
+    "magenta": { id: 45, color: "#e05194" },
+    "salmon": { id: 46, color: "#ff8d85" },
+    "charcoal": { id: 47, color: "#808080" },
+    "grey": { id: 48, color: "#b8b8b8" },
+    "taupe": { id: 49, color: "#ccac93" },
+};

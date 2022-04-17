@@ -112,3 +112,7 @@ storage/
 
 # To lazy to add to global ignore
 *.code-workspace
+
+log/
+random_scripts/
+swagger-v3.v3.json

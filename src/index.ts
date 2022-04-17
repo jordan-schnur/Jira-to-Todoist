@@ -8,6 +8,9 @@ import "./env_asserts/env-asserts";
 import { ENV_SERVER, ENV_TODOIST_TOKEN } from './env_asserts/env-asserts';
 import { IssueBean, StatusDetails } from './networking/JiraApi';
 import JiraClient from './client/jira-client';
+import { TODOIST_COLOR } from './todoist-colors';
+import { getLogger } from './logging/LogConfig';
+import { TSMap } from 'typescript-map';
 
 export const localStorage = new LocalStorage('./storage');
 export const ACTIVE_ISSUES_KEY = 'activeIssues';
@@ -16,6 +19,31 @@ export const LABELS_KEY = 'labels';
 export const USER_KEY = 'user';
 export let TODOIST_INBOX_ID = -1;
 export const todoistApi = new TodoistApi(ENV_TODOIST_TOKEN);
+export let DEFUALT_TODOIST_LABEL_ID = 2158644766;
+export const logger = getLogger("main");
+export const JIRA_STATUS_CONFIG = {
+    "To Do": {
+        colorId: TODOIST_COLOR.red.id,
+        namePattern: "[*issue*] Complete *summary*"
+    },
+    "In Progress": {
+        colorId: TODOIST_COLOR.yellow.id,
+        namePattern: "[*issue*] Complete *summary*"
+    },
+    "Peer Review": {
+        colorId: TODOIST_COLOR.lime_green.id,
+        namePattern: "[*issue*] Review *summary*"
+    },
+    "Blocked": {
+        colorId: TODOIST_COLOR.red.id,
+        namePattern: "[*issue*] Unblock *summary*"
+    },
+    "Awaiting Acceptance": {
+        colorId: TODOIST_COLOR.blue.id,
+        namePattern: "[*issue*] Demo *summary*"
+    },
+
+}
 
 localStorage.setItem(USER_KEY, true);
 
@@ -37,196 +65,164 @@ export interface LabelObject {
     todoistId: number;
     jiraId: number;
 };
+ 
 
-let labelMap: Map<string, number> = new Map();
-let labels: Map<String, LabelObject> = new Map();
-let jiraLabelToTodoistLabel: Map<number, number> = new Map();
+let labels: TSMap<String, LabelObject> = (localStorage.getItem(LABELS_KEY) === null || localStorage.getItem(LABELS_KEY) === '') 
+? new TSMap() 
+: new TSMap<String, LabelObject>().fromJSON(JSON.parse(localStorage.getItem(LABELS_KEY)));
+ 
+function getJiraStatusConfigFromName(statusName: string): {colorId: number, namePattern: string} { 
+    for(let configStatusName of Object.keys(JIRA_STATUS_CONFIG)) {
+        if(statusName.includes(configStatusName)) {
+            return JIRA_STATUS_CONFIG[configStatusName];
+        }
+    }
 
-function setStatuses() {
-    
+    return {
+        colorId: TODOIST_COLOR.charcoal.id,
+        namePattern: "[*issue*] *summary*"
+    }
 }
 
-if (localStorage.getItem(LABELS_KEY) === null || localStorage.getItem(LABELS_KEY) === '') {
-    let todoistLabels: Map<string, number> = new Map();
-    // get labels from todoist
-    todoistApi.getLabels().then(labels => {
-        let labelIds = [];
-        for (let label of labels) {
-            todoistLabels.set(label.name, label.id);
-        }
+function jiraIssueToTodoistTaskNameWithPattern(issue: IssueBean, pattern: string): string {
+    return pattern
+    .replace("*issue*", issue.key!)
+    .replace("*summary*", issue.fields!.summary);
+}
 
-        return new JiraClient().getStatuses();
-    }).then((statuses) => {
-        let status: StatusDetails;
-        for (status of statuses) {
-            if(labelMap.get("Jira - " + status.name) === undefined) {
-                switch (status.id) {
-                    case 1:
-                        todoistApi.addLabel({
-                            name: "Jira - " + status.name,
-                            color: 48,
-                        }).then((label) => {
-                            labels.set("Jira - " + status.name, {   
-                                todoistId: label.id,
-                                jiraId: status.id
-                            });
-                        }).catch(err => {
-                            console.log("Error adding jira label" + err);
-                            console.log(err); 
-                            setStatuses();
-                        });
-                        break;
-                    case 2: // To Do
-                        case 1:
-                        todoistApi.addLabel({
-                            name: "Jira - " + status.name,
-                            color: 47,
-                        }).then((label) => {
-                            labels.set("Jira - " + status.name, {   
-                                todoistId: label.id,
-                                jiraId: status.id
-                            });
-                        }).catch(err => {
-                            console.log("Error adding jira label" + err);
-                            console.log(err); 
-                            setStatuses();
-                        });
-                        break;
-                    case 3: // Done
-                        case 1:
-                        todoistApi.addLabel({
-                            name: "Jira - " + status.name,
-                            color: 48,
-                        }).then((label) => {
-                            labels.set("Jira - " + status.name, {   
-                                todoistId: label.id,
-                                jiraId: status.id
-                            });
-                        }).catch(err => {
-                            console.log("Error adding jira label" + err);
-                            console.log(err); 
-                            setStatuses();
-                        });
-                        break;
-                    case 4: // In Progress
-                        todoistApi.addLabel({
-                            name: "Jira - " + status.name,
-                            color: 33,
-                        }).then((label) => {
-                            labels.set("Jira - " + status.name, {   
-                                todoistId: label.id,
-                                jiraId: status.id
-                            });
-                        }).catch(err => {
-                            console.log("Error adding jira label" + err);
-                            console.log(err); 
-                            setStatuses();
-                        });
-                        break;
-                }
-            }
+function todoistColorFromCategoryId(categoryId: number): number {
+    switch(categoryId) {
+        case 1:
+            return TODOIST_COLOR.charcoal.id;
+            break;
+        case 2:
+            return TODOIST_COLOR.blue.id;
+            break;
+        case 3:
+            return TODOIST_COLOR.mint_green.id;
+            break;
+        case 4:
+            return TODOIST_COLOR.yellow.id;
+            break;
+    }
+
+    return TODOIST_COLOR.charcoal.id;
+}
+
+async function createLabelIfNotExist(name: string, jiraLabelId: number, colorId: number): Promise<LabelObject|undefined> {
+    if(!labels.has(name)) {
+        try {
+            let label = await todoistApi.addLabel({
+                name: name,
+                color: colorId,
+            })
+
+            let labelObject: LabelObject = {   
+                todoistId: label.id,
+                jiraId: jiraLabelId
+            }; 
+
+            logger.info("Created new todoist label", {
+                "label_name": name,
+                "jira_label_id": jiraLabelId,
+            }); 
+
+
+            labels.set(name, labelObject); 
+            localStorage.setItem(LABELS_KEY, JSON.stringify(labels.toJSON()));
+
+            return labelObject
+        } catch (e) { 
+            console.log("Failed to create todoist label: %s. Error %o", name, e);
+            logger.error("Failed to create todoist label", e, {
+                "label_name": name,
+                "jira_label_id": jiraLabelId,
+            });
+            return;
         }
+    }
+
+    return labels.get(name);
+}
+
+function formatDescription(description: string|null) {
+    if(description) {
+        return "**Task Description**\n"
+    }
+
+    return '';
+}
+
+async function createTodoistTaskFromIssue(issue: IssueBean): Promise<void> {
+    let taskConfig = getJiraStatusConfigFromName(issue.fields!.status.name);
+    let label = await createLabelIfNotExist("jira-" + issue.fields!.status.name.replace(/\s/g, '-'),  issue.fields!.status.id, taskConfig!.colorId);
+    let labelIds: Array<number> = (DEFUALT_TODOIST_LABEL_ID !== -1) ? [DEFUALT_TODOIST_LABEL_ID] : [];
+
+    if(label) {
+        labelIds.push(label.todoistId);
+    }
+
+    todoistApi.addTask({
+        content: jiraIssueToTodoistTaskNameWithPattern(issue, taskConfig!.namePattern),
+        description: ENV_SERVER + "/browse/" + issue.key + "\n\n" + formatDescription(issue.fields!.description),
+        labelIds: labelIds,
+    }).then(task => {
+        console.log("Task added: " + task.id);
+        logger.info("Added task to Todoist" , {todoist_task_id: task.id, jira_issue_key: issue.key, "jira_issue_status": issue.fields!.status.name});
+    }).catch(error => {
+        logger.error("Failed to add task to Todoist", error, {jira_issue_key: issue.key, "jira_issue_status": issue.fields!.status.name});
+        console.log("An error occured while adding task: " + error);
     });
-};
-
-
-
+}
 
 let search = new SearchService();
-search.searchIssues(ACTIVE_TASK).then(issues => {
-    let savedIssues: IssueBean[];
-    // check if active issues are already stored or an empty string is stored
-    // if true set savedIssues to the value
-    // if false set savedIssues to an empty array  
-    if (localStorage.getItem(ACTIVE_ISSUES_KEY) === null || localStorage.getItem(ACTIVE_ISSUES_KEY) === '') {
-        savedIssues = [];
-    } else {
-        savedIssues = JSON.parse(localStorage.getItem(ACTIVE_ISSUES_KEY));
-    }
 
-    let issueMap = new Map();
-
-    for (let issue of savedIssues) {
-        issueMap.set(issue.key, issue);
-    }
-
-    // Loop through issues and check if it is saved in issueMap 
-    // if it is check if the status has changed and if so add it to the todoist inbox and replace the issue in issueMap
-    // if it is not saved in issueMap add it to the todoist inbox and add it to the issueMap
-    for (let issue of issues) {
-        if (issueMap.has(issue.key)) {
-            let savedIssue = issueMap.get(issue.key);
-            console.log(savedIssue.key + " Found");
-            console.log(savedIssue.fields.status.name + " !=== " + issue.fields!.status.name);
-            if (savedIssue.fields.status.name !== issue.fields!.status.name) {
-                todoistApi.addTask({
-                    content: "[" + issue.key + "] " + issue.fields!.summary,
-                    description: ENV_SERVER + "/browse/" + issue.key + "\n\n" + issue.fields!.description,
-                }).then(task => {
-                    console.log("Task added" + task.id);
-                }).catch(error => {
-                    console.log("An error occured while adding task: " + error);
-                });
-                //todoistApi.addItemToProject(TODOIST_INBOX_ID, issue.key, issue.fields.status.name);
-                issueMap.set(issue.key, issue);
-            }
+function searchIssuesPlease() {
+    search.searchIssues(ACTIVE_TASK).then(async issues => {
+        let savedIssues: IssueBean[];
+        // check if active issues are already stored or an empty string is stored
+        // if true set savedIssues to the value
+        // if false set savedIssues to an empty array  
+        if (localStorage.getItem(ACTIVE_ISSUES_KEY) === null || localStorage.getItem(ACTIVE_ISSUES_KEY) === '') {
+            savedIssues = [];
         } else {
-            todoistApi.addTask({
-                content: "[" + issue.key + "] " + issue.fields!.summary,
-                description: ENV_SERVER + "/browse/" + issue.key + "\n\n" + issue.fields!.description,
-            }).then(task => {
-                console.log("Task added: " + task.id);
-            }).catch(error => {
-                console.log("An error occured while adding task: " + error);
-            });
+            savedIssues = JSON.parse(localStorage.getItem(ACTIVE_ISSUES_KEY));
+        }
+    
+        let issueMap = new Map();
+    
+        for (let issue of savedIssues) {
             issueMap.set(issue.key, issue);
         }
-    }
     
-    let bobIssues: IssueBean[] = [];
-    for (let issue of issueMap.values()) {
-        bobIssues.push(issue);
-    }
+        // Loop through issues and check if it is saved in issueMap 
+        // if it is check if the status has changed and if so add it to the todoist inbox and replace the issue in issueMap
+        // if it is not saved in issueMap add it to the todoist inbox and add it to the issueMap
+        for (let issue of issues) {
+            if (issueMap.has(issue.key)) { 
+                let savedIssue = issueMap.get(issue.key);
+                if (savedIssue.fields.status.name !== issue.fields!.status.name) { // Task found but status has changed
+                    createTodoistTaskFromIssue(issue);
+                    issueMap.set(issue.key, issue);
+                }
+            } else { // No task found in issueMap
+                createTodoistTaskFromIssue(issue);
+                issueMap.set(issue.key, issue);
+            }
+        }
+        
+        let bobIssues: IssueBean[] = [];
+        for (let issue of issueMap.values()) {
+            bobIssues.push(issue);
+        }
+        localStorage.setItem(ACTIVE_ISSUES_KEY, JSON.stringify(bobIssues));
+    }).catch(error => {
+        logger.error("Failed to search issues", error, {"search_query": ACTIVE_TASK});
+    });
+}
 
-    localStorage.setItem(ACTIVE_ISSUES_KEY, JSON.stringify(bobIssues));
+cron.schedule('*/5 * * * *', () => {
+    searchIssuesPlease();
 });
 
-
-    // TODO: Make more efficient, hashmaps are always cool
-    // if (savedIssues) {
-    //     for (let issue of issues) {
-    //         let found = false;
-    //         for (let savedIssue of savedIssues) {
-    //             if (savedIssue.key === issue.key) {
-    //                 if (savedIssue.fields.status !== issue.fields.status) {
-    //                     found = false
-    //                 }
-    //                 found = true;
-    //                 break;
-    //             }
-    //         }
-    //         if (!found) {
-    //             savedIssues.push(issue);
-
-    //             console.log("ToDoist: " + issue.key + " is now active");
-    //             // todoistApi.addTask({
-    //             //     content: "[" + issue.key + "] " + issue.fields.summary,
-    //             //     description: ENV_SERVER + "/browse/" + issue.key + "\n\n" + issue.fields.description,
-    //             // }).then(task => {
-    //             //     console.log("Task added" + task.id);
-    //             // }).catch(error => {
-    //             //     console.log("An error occured while adding task: " + error);
-    //             // });
-
-    //         }
-    //     }
-    // } else {
-    //     savedIssues = issues;
-    // }
-
-    // localStorage.setItem(ACTIVE_ISSUES_KEY, JSON.stringify(savedIssues));
-//});
-
-// cron.schedule('1 * * * * *', () => {
-//     console.log('running a task every seconds');
-// });
+searchIssuesPlease();

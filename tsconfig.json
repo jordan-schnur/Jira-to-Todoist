@@ -24,5 +24,11 @@
     "strict": true,                                      /* Enable all strict type-checking options. */
     "noImplicitAny": false,                               /* Enable error reporting for expressions and declarations with an implied `any` type.. */
     "skipLibCheck": true                                 /* Skip type checking all .d.ts files. */
-  }
+  },
+  "exclude": [
+    "./node_modules/**",
+    "./build/**/*",
+    "./random_scripts/**/*",
+    "./*.js"
+  ]
 }
