@@ -195,6 +195,8 @@ function searchIssuesPlease() {
         for (let issue of savedIssues) {
             issueMap.set(issue.key, issue);
         }
+
+        console.log("Saved issues: " + savedIssues.length);
     
         // Loop through issues and check if it is saved in issueMap 
         // if it is check if the status has changed and if so add it to the todoist inbox and replace the issue in issueMap
@@ -228,7 +230,7 @@ cron.schedule('*/5 * * * *', () => {
 
 searchIssuesPlease();
 
-createServer((req, res) => {
+createServer((req, res) => { // Keep process alive, should work just with the cron but better safe than sorry
     logger.info("Request received from client", {"request_id": req.url});
     res.writeHead(200, {'Content-Type': 'text/plain'});
     res.write('Hello World');
