@@ -1,10 +1,11 @@
 import axios from "axios";
 import 'dotenv/config';
+import { ENV_PASSWORD, ENV_USERNAME } from "../env_asserts/env-asserts";
 
 export default class ApiService {
     constructor() {
         axios.defaults.baseURL = process.env.server
-        axios.defaults.headers.common['Authorization'] = 'Basic ' + Buffer.from(process.env.username + ':' + process.env.password).toString('base64');
+        axios.defaults.headers.common['Authorization'] = 'Basic ' + Buffer.from(ENV_USERNAME + ':' + ENV_PASSWORD).toString('base64');
     }
 
     get(url: string) {

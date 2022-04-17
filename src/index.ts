@@ -6,12 +6,13 @@ import { LocalStorage } from 'node-localstorage';
 import { Label, TodoistApi } from '@doist/todoist-api-typescript';
 import "./env_asserts/env-asserts";
 import { ENV_SERVER, ENV_TODOIST_TOKEN } from './env_asserts/env-asserts';
-import { IssueBean, StatusDetails } from './networking/JiraApi';
-import JiraClient from './client/jira-client';
+import { IssueBean } from './networking/JiraApi';
 import { TODOIST_COLOR } from './todoist-colors';
 import { getLogger } from './logging/LogConfig';
 import { TSMap } from 'typescript-map';
 import { createServer } from 'http';
+require('source-map-support').install();
+process.on('unhandledRejection', console.log);
 
 export const localStorage = new LocalStorage('./storage');
 export const ACTIVE_ISSUES_KEY = 'activeIssues';
@@ -180,6 +181,10 @@ let search = new SearchService();
 
 function searchIssuesPlease() {
     search.searchIssues(ACTIVE_TASK).then(async issues => {
+        if(!issues) {
+            logger.error("Exiting sync early because of failed search");
+            return;
+        }
         let savedIssues: IssueBean[];
         // check if active issues are already stored or an empty string is stored
         // if true set savedIssues to the value
