@@ -9,6 +9,7 @@ function writeToLog(logMessage: LogMessage) {
   let logName = start.toISOString().split('T')[0] + ".log";
 
   let eStr = logMessage.error ? "\nError: " + logMessage.error : "";
+  console.log(logMessage.message + eStr + "\n");
   appendFile("logs/" + logName, logMessage.message + eStr + "\n", (err) => {
     if (err) {
       console.log("Error writing to log file! Error: %o", err);

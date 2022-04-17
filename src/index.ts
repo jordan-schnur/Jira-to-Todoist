@@ -134,7 +134,7 @@ async function createLabelIfNotExist(name: string, jiraLabelId: number, colorId:
 
             return labelObject
         } catch (e) { 
-            console.log("Failed to create todoist label: %s. Error %o", name, e);
+            //console.log("Failed to create todoist label: %s. Error %o", name, e);
             logger.error("Failed to create todoist label", e, {
                 "label_name": name,
                 "jira_label_id": jiraLabelId,
@@ -168,11 +168,11 @@ async function createTodoistTaskFromIssue(issue: IssueBean): Promise<void> {
         description: ENV_SERVER + "/browse/" + issue.key + "\n\n" + formatDescription(issue.fields!.description),
         labelIds: labelIds,
     }).then(task => {
-        console.log("Task added: " + task.id);
+        //console.log("Task added: " + task.id);
         logger.info("Added task to Todoist" , {todoist_task_id: task.id, jira_issue_key: issue.key, "jira_issue_status": issue.fields!.status.name});
     }).catch(error => {
         logger.error("Failed to add task to Todoist", error, {jira_issue_key: issue.key, "jira_issue_status": issue.fields!.status.name});
-        console.log("An error occured while adding task: " + error);
+        //console.log("An error occured while adding task: " + error);
     });
 }
 
@@ -195,8 +195,6 @@ function searchIssuesPlease() {
         for (let issue of savedIssues) {
             issueMap.set(issue.key, issue);
         }
-
-        console.log("Saved issues: " + savedIssues.length);
     
         // Loop through issues and check if it is saved in issueMap 
         // if it is check if the status has changed and if so add it to the todoist inbox and replace the issue in issueMap
